@@ -1,7 +1,6 @@
 /**
  * Catalog service
- * - Quản lý dữ liệu sản phẩm (CRUD, seed)
- * - Phát sự kiện `ProductUpserted` để các service khác và projection cập nhật
+ * Xử lý quản lý sản phẩm và phát event để các service khác đồng bộ dữ liệu.
  */
 import { config } from "../../../packages/shared/src/config.js";
 import { connectMongo } from "../../../packages/shared/src/db.js";
@@ -25,19 +24,28 @@ app.get("/health", (_req, res) => {
 });
 
 app.get("/products", async (_req, res) => {
+  // Lấy các sản phẩm đang hoạt động để hiển thị cho khách hàng
   const products = await Product.find({ active: true }).sort({ name: 1 }).lean();
   res.json(products.map(toProductView));
 });
 
 app.get("/admin/products", async (_req, res) => {
+  // Admin lấy toàn bộ sản phẩm, bao gồm cả sản phẩm đã bị xóa mềm
   const products = await Product.find().sort({ updatedAt: -1 }).lean();
   res.json(products.map(toProductView));
 });
 
 app.delete("/admin/products/:productId", async (req, res, next) => {
   try {
-    await Product.updateOne({ productId: req.params.productId }, { active: false, stock: 0 });
+    // Xóa mềm sản phẩm thay vì xóa khỏi database
+    await Product.updateOne(
+      { productId: req.params.productId },
+      { active: false, stock: 0 }
+    );
+
     const product = await Product.findOne({ productId: req.params.productId }).lean();
+
+    // Publish event để inventory-service và các service khác biết sản phẩm đã ngừng bán
     if (product) {
       await eventBus.publish({
         type: "ProductUpserted",
@@ -54,6 +62,7 @@ app.delete("/admin/products/:productId", async (req, res, next) => {
         occurredAt: new Date().toISOString()
       });
     }
+
     res.json({ deleted: true });
   } catch (error) {
     next(error);
@@ -61,8 +70,7 @@ app.delete("/admin/products/:productId", async (req, res, next) => {
 });
 
 /**
- * Chuyển mongoose Product document sang view trả về client.
- * Giữ shape công khai, ẩn các trường nội bộ nếu có.
+ * Chuẩn hóa dữ liệu product trước khi trả về client.
  */
 function toProductView(product) {
   return {
@@ -82,8 +90,12 @@ function toProductView(product) {
 
 app.post("/products", async (req, res, next) => {
   try {
+    // Validate dữ liệu request trước khi tạo hoặc cập nhật sản phẩm
     const input = upsertProductSchema.parse(req.body);
+
+    // Gửi command vào handler để xử lý nghiệp vụ upsert product
     const result = await handler.execute(new UpsertProductCommand(input));
+
     res.status(202).json(result);
   } catch (error) {
     next(error);
@@ -92,6 +104,7 @@ app.post("/products", async (req, res, next) => {
 
 app.post("/products/seed", async (_req, res, next) => {
   try {
+    // Danh sách sản phẩm mẫu dùng để seed dữ liệu ban đầu
     const samples = [
       {
         productId: "xoai-cat-hoa-loc",
@@ -140,6 +153,8 @@ app.post("/products/seed", async (_req, res, next) => {
     ];
 
     const results = [];
+
+    // Seed cũng đi qua handler để đảm bảo vẫn chạy đúng logic publish event
     for (const product of samples) {
       results.push(await handler.execute(new UpsertProductCommand(product)));
     }
