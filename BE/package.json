@@ -1,0 +1,27 @@
+{
+  "name": "fruitweb-be",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n gateway,user,catalog,inventory,order,projection \"npm:dev:gateway\" \"npm:dev:user\" \"npm:dev:catalog\" \"npm:dev:inventory\" \"npm:dev:order\" \"npm:dev:projection\"",
+    "dev:gateway": "node --watch apps/gateway/src/index.js",
+    "dev:user": "node --watch apps/user-service/src/index.js",
+    "dev:catalog": "node --watch apps/catalog-service/src/index.js",
+    "dev:inventory": "node --watch apps/inventory-service/src/index.js",
+    "dev:order": "node --watch apps/order-service/src/index.js",
+    "dev:projection": "node --watch apps/projection-service/src/index.js",
+    "check": "node --check apps/gateway/src/index.js && node --check apps/user-service/src/index.js && node --check apps/catalog-service/src/index.js && node --check apps/inventory-service/src/index.js && node --check apps/order-service/src/index.js && node --check apps/projection-service/src/index.js"
+  },
+  "dependencies": {
+    "concurrently": "^9.1.2",
+    "cors": "^2.8.5",
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.8.0",
+    "nanoid": "^5.0.7",
+    "nodemailer": "^6.9.16",
+    "zod": "^3.23.8"
+  }
+}
