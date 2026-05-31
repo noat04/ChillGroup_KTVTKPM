@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 const redis = createRedis();
 const app = createHttpApp();
 
-const catalogBaseUrl = config.catalogServiceUrl;
+const productBaseUrl = config.productServiceUrl;
 const orderBaseUrl = config.orderServiceUrl;
 const userBaseUrl = config.userServiceUrl;
 const inventoryBaseUrl = config.inventoryServiceUrl;
@@ -194,7 +194,7 @@ app.get("/api/products", async (_req, res) => {
 
 /**
  * Load danh sách sản phẩm từ Redis projection (nếu có) để trả về nhanh cho client.
- * Nếu không có dữ liệu trong projection thì fallback gọi Catalog service.
+ * Nếu không có dữ liệu trong projection thì fallback gọi Product service.
  */
 async function loadActiveProducts() {
   const raw = await redis.hgetall(config.projectionProductsKey);
@@ -204,7 +204,7 @@ async function loadActiveProducts() {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   if (products.length === 0) {
-    const response = await fetch(`${catalogBaseUrl}/products`);
+    const response = await fetch(`${productBaseUrl}/products`);
     products = await response.json();
   }
 
@@ -238,7 +238,7 @@ app.post("/api/ai/product-suggestions", aiRateLimiter, async (req, res, next) =>
 
 app.post("/api/products", requireAdmin, async (req, res, next) => {
   try {
-    const response = await fetch(`${catalogBaseUrl}/products`, {
+    const response = await fetch(`${productBaseUrl}/products`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req.body)
@@ -251,7 +251,7 @@ app.post("/api/products", requireAdmin, async (req, res, next) => {
 });
 
 app.get("/api/admin/products", requireAdmin, (req, res, next) =>
-  proxyJson(req, res, next, `${catalogBaseUrl}/admin/products`, { body: false })
+  proxyJson(req, res, next, `${productBaseUrl}/admin/products`, { body: false })
 );
 
 /**
@@ -466,12 +466,12 @@ function normalizeText(value) {
 }
 
 app.delete("/api/admin/products/:productId", requireAdmin, (req, res, next) =>
-  proxyJson(req, res, next, `${catalogBaseUrl}/admin/products/${req.params.productId}`, { body: false })
+  proxyJson(req, res, next, `${productBaseUrl}/admin/products/${req.params.productId}`, { body: false })
 );
 
 app.post("/api/products/seed", async (_req, res, next) => {
   try {
-    const response = await fetch(`${catalogBaseUrl}/products/seed`, {
+    const response = await fetch(`${productBaseUrl}/products/seed`, {
       method: "POST"
     });
 
@@ -515,7 +515,8 @@ app.post("/api/admin/uploads/product-image", requireAdmin, async (req, res, next
 
     const timestamp = Math.floor(Date.now() / 1000);
     const folder = config.cloudinaryFolder;
-    const publicId = fileName ? fileName.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "-") : undefined;
+    const safeFileName = fileName ? fileName.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "-") : "";
+    const publicId = safeFileName ? `${safeFileName}-${timestamp}` : undefined;
     const signatureParams = { folder, timestamp };
     if (publicId) {
       signatureParams.public_id = publicId;
@@ -542,9 +543,17 @@ app.post("/api/admin/uploads/product-image", requireAdmin, async (req, res, next
       method: "POST",
       body: form
     });
-    const result = await response.json();
+    const responseText = await response.text();
+    let result = {};
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = { error: { message: responseText } };
+    }
     if (!response.ok) {
-      res.status(response.status).json({ error: result.error?.message || "Cloudinary upload failed" });
+      res.status(response.status).json({
+        error: result.error?.message || "Cloudinary upload failed"
+      });
       return;
     }
 

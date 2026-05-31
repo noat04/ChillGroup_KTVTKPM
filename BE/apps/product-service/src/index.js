@@ -1,5 +1,5 @@
 /**
- * Catalog service
+ * Product service
  * Xử lý quản lý sản phẩm và phát event để các service khác đồng bộ dữ liệu.
  */
 import { config } from "../../../packages/shared/src/config.js";
@@ -20,7 +20,7 @@ const handler = new UpsertProductHandler(eventBus);
 const app = createHttpApp();
 
 app.get("/health", (_req, res) => {
-  res.json({ service: "catalog-service", status: "ok" });
+  res.json({ service: "product-service", status: "ok" });
 });
 
 app.get("/products", async (_req, res) => {
@@ -167,8 +167,8 @@ app.post("/products/seed", async (_req, res, next) => {
 
 app.use(errorHandler);
 
-await connectMongo("fruitweb_catalog");
+await connectMongo("fruitweb_products");
 
-app.listen(config.catalogPort, () => {
-  console.log(`catalog-service listening on ${config.catalogPort}`);
+app.listen(config.productPort, () => {
+  console.log(`product-service listening on ${config.productPort}`);
 });

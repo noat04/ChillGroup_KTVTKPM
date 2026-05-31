@@ -3,14 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n gateway,user,catalog,inventory,order,projection \"npm:dev:gateway\" \"npm:dev:user\" \"npm:dev:catalog\" \"npm:dev:inventory\" \"npm:dev:order\" \"npm:dev:projection\"",
+    "dev": "concurrently -n gateway,user,product,inventory,order,projection \"npm:dev:gateway\" \"npm:dev:user\" \"npm:dev:product\" \"npm:dev:inventory\" \"npm:dev:order\" \"npm:dev:projection\"",
     "dev:gateway": "node --watch apps/gateway/src/index.js",
     "dev:user": "node --watch apps/user-service/src/index.js",
-    "dev:catalog": "node --watch apps/catalog-service/src/index.js",
+    "dev:product": "node --watch apps/product-service/src/index.js",
     "dev:inventory": "node --watch apps/inventory-service/src/index.js",
     "dev:order": "node --watch apps/order-service/src/index.js",
     "dev:projection": "node --watch apps/projection-service/src/index.js",
-    "check": "node --check apps/gateway/src/index.js && node --check apps/user-service/src/index.js && node --check apps/catalog-service/src/index.js && node --check apps/inventory-service/src/index.js && node --check apps/order-service/src/index.js && node --check apps/projection-service/src/index.js"
+    "check": "node --check apps/gateway/src/index.js && node --check apps/user-service/src/index.js && node --check apps/product-service/src/index.js && node --check apps/inventory-service/src/index.js && node --check apps/order-service/src/index.js && node --check apps/projection-service/src/index.js"
   },
   "dependencies": {
     "concurrently": "^9.1.2",

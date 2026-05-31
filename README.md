@@ -7,7 +7,7 @@ Web ban trai cay bang JavaScript theo huong microservice, event-driven, CQRS va 
 - `FE`: ReactJS + Vite JavaScript client cho khach mua trai cay.
 - `BE/apps/gateway`: Node.js Express API gateway cho frontend.
 - `BE/apps/user-service`: dang ky, dang nhap, JWT, quen mat khau va reset password qua email.
-- `BE/apps/catalog-service`: Node.js Express service quan ly san pham, luu MongoDB, publish `ProductUpserted`.
+- `BE/apps/product-service`: Node.js Express service quan ly san pham, luu MongoDB, publish `ProductUpserted`.
 - `BE/apps/inventory-service`: worker quan ly ton kho trong MongoDB, cache stock tren Redis, subscribe order events.
 - `BE/apps/order-service`: Node.js Express command side tao don hang, luu MongoDB, publish `OrderCreated`.
 - `BE/apps/projection-service`: worker query side, build Redis projections cho product list.
@@ -15,7 +15,7 @@ Web ban trai cay bang JavaScript theo huong microservice, event-driven, CQRS va 
 
 MongoDB duoc dung lam database , luu ben vung tren may thong qua Docker volume:
 
-- `fruitweb_catalog`: san pham.
+- `fruitweb_products`: san pham.
 - `fruitweb_inventory`: ton kho.
 - `fruitweb_orders`: don hang.
 - `fruitweb_users`: tai khoan khach hang/admin va token reset mat khau.
@@ -116,7 +116,7 @@ Task management:
 | T-01 | Thiet lap `docker-compose.yml` cho MongoDB va Redis. | Nguoi 3 | Done |
 | T-02 | Xay dung gateway route `/api/products`, `/api/orders`, `/api/auth`. | Nguoi 1 | Done |
 | T-03 | Xay dung `user-service` cho auth, JWT va reset password. | Nguoi 1 | Done |
-| T-04 | Xay dung `catalog-service` va model san pham. | Nguoi 2 | Done |
+| T-04 | Xay dung `product-service` va model san pham. | Nguoi 2 | Done |
 | T-05 | Xay dung `order-service` command/query tao va doc don hang. | Nguoi 3 | Done |
 | T-06 | Xay dung `inventory-service` lang nghe order event va cap nhat stock. | Nguoi 3 | Done |
 | T-07 | Xay dung `projection-service` tao read model tren Redis. | Nguoi 2 | Done |
@@ -152,7 +152,7 @@ MONGO_URL=mongodb://192.168.1.10:27017
 Gateway can tro den IP service that:
 
 ```env
-CATALOG_SERVICE_URL=http://192.168.1.11:8081
+PRODUCT_SERVICE_URL=http://192.168.1.11:8081
 ORDER_SERVICE_URL=http://192.168.1.12:8082
 USER_SERVICE_URL=http://192.168.1.13:8083
 INVENTORY_SERVICE_URL=http://192.168.1.12:8084
@@ -161,5 +161,5 @@ INVENTORY_SERVICE_URL=http://192.168.1.12:8084
 Goi y chia nhom:
 
 - Nguoi 1: `gateway` + `FE` + `user-service`.
-- Nguoi 2: `catalog-service` + `projection-service`.
+- Nguoi 2: `product-service` + `projection-service`.
 - Nguoi 3: `order-service` + `inventory-service` + Docker ha tang chung.

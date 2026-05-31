@@ -13,11 +13,11 @@ export const config = {
   mongoUrl: process.env.MONGO_URL || "mongodb://localhost:27017",
   gatewayPort: Number(process.env.GATEWAY_PORT || 8080),
   userPort: Number(process.env.USER_PORT || 8083),
-  catalogPort: Number(process.env.CATALOG_PORT || 8081),
+  productPort: Number(process.env.PRODUCT_PORT || 8081),
   orderPort: Number(process.env.ORDER_PORT || 8082),
   inventoryPort: Number(process.env.INVENTORY_PORT || 8084),
   userServiceUrl: process.env.USER_SERVICE_URL || "http://localhost:8083",
-  catalogServiceUrl: process.env.CATALOG_SERVICE_URL || "http://localhost:8081",
+  productServiceUrl: process.env.PRODUCT_SERVICE_URL || "http://localhost:8081",
   orderServiceUrl: process.env.ORDER_SERVICE_URL || "http://localhost:8082",
   inventoryServiceUrl: process.env.INVENTORY_SERVICE_URL || "http://localhost:8084",
   jwtSecret: process.env.JWT_SECRET || "fruitweb-dev-secret",
@@ -44,16 +44,18 @@ export const config = {
 };
 
 function loadDotEnv() {
-  // 2. Lùi 3 cấp thư mục (src -> shared -> packages -> BE) để tìm đúng file
-  const envPath = join(__dirname, "../../../.env.example");
+  // Uu tien file .env khi chay that, fallback .env.example cho local/demo.
+  const beRoot = join(__dirname, "../../..");
+  const envPath = existsSync(join(beRoot, ".env"))
+    ? join(beRoot, ".env")
+    : join(beRoot, ".env.example");
 
   if (!existsSync(envPath)) {
-    // Thêm dòng log này để nếu lỗi, bạn sẽ biết nó đang tìm sai ở đâu
-    console.warn("⚠️ Không tìm thấy file cấu hình tại:", envPath);
+    console.warn("Config file not found at:", envPath);
     return;
   }
 
-  console.log("✅ Đã load thành công file:", envPath);
+  console.log("Loaded config file:", envPath);
 
   const content = readFileSync(envPath, "utf8");
   for (const line of content.split(/\r?\n/)) {

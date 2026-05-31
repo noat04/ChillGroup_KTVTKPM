@@ -111,16 +111,34 @@ export function AdminProducts({ token, loadProducts, setMessage, onUnauthorized 
   }
 
   async function saveProduct(productForm) {
-    await fetch(`${apiBaseUrl}/products`, {
+    const authToken = localStorage.getItem("fruitweb_token") || token;
+    const productPayload = {
+      ...productForm,
+      price: Number(productForm.price),
+      stock: Number(productForm.stock)
+    };
+    if (!productPayload.productId) {
+      delete productPayload.productId;
+    }
+
+    const response = await fetch(`${apiBaseUrl}/products`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        ...productForm,
-        price: Number(productForm.price),
-        stock: Number(productForm.stock)
-      })
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify(productPayload)
     });
-    await adminFetch(`/admin/inventory/${productForm.productId}`, {
+    const result = await response.json();
+    if (response.status === 401) {
+      setMessage("Phien dang nhap admin da het han. Vui long dang nhap lai.", "warning");
+      onUnauthorized?.();
+      return;
+    }
+    if (!response.ok) {
+      setMessage(result.error || "Khong luu duoc san pham.", "error");
+      return;
+    }
+
+    const productId = result.productId || productForm.productId;
+    await adminFetch(`/admin/inventory/${productId}`, {
       method: "PATCH",
       body: JSON.stringify({ stock: Number(productForm.stock) })
     });
@@ -136,6 +154,7 @@ export function AdminProducts({ token, loadProducts, setMessage, onUnauthorized 
         product={selectedProduct}
         token={token}
         setMessage={setMessage}
+        onUnauthorized={onUnauthorized}
         onBack={() => setMode("list")}
         onSave={saveProduct}
       />
@@ -270,9 +289,10 @@ export function AdminProducts({ token, loadProducts, setMessage, onUnauthorized 
   );
 }
 
-function AdminProductDetail({ product, token, setMessage, onBack, onSave }) {
+function AdminProductDetail({ product, token, setMessage, onUnauthorized, onBack, onSave }) {
   const [form, setForm] = useState(product);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
   const isNew = !product.productId;
 
   function update(field, value) {
@@ -281,6 +301,14 @@ function AdminProductDetail({ product, token, setMessage, onBack, onSave }) {
 
   function submit(event) {
     event.preventDefault();
+    if (isUploading) {
+      setMessage("Vui long doi upload anh hoan tat.", "warning");
+      return;
+    }
+    if (!form.imageUrl) {
+      setMessage("Vui long upload anh san pham truoc khi luu.", "warning");
+      return;
+    }
     void onSave(form);
   }
 
@@ -299,22 +327,31 @@ function AdminProductDetail({ product, token, setMessage, onBack, onSave }) {
 
     setIsUploading(true);
     try {
+      const authToken = localStorage.getItem("fruitweb_token") || token;
+      if (!authToken) {
+        setMessage("Khong tim thay token admin. Vui long dang nhap lai.", "warning");
+        return;
+      }
       const dataUrl = await readFileAsDataUrl(file);
       const response = await fetch(`${apiBaseUrl}/admin/uploads/product-image`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${authToken}`
         },
         body: JSON.stringify({ dataUrl, fileName: file.name })
       });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(result.error || "Khong upload duoc anh.", "error");
+        const detail = Array.isArray(result.missing) ? ` Thieu: ${result.missing.join(", ")}.` : "";
+        setMessage(`${result.error || "Khong upload duoc anh."}${detail}`, "error");
         return;
       }
       update("imageUrl", result.imageUrl);
+      setUploadedFileName(file.name);
       setMessage("Da upload anh san pham.", "success");
+    } catch {
+      setMessage("Khong upload duoc anh. Kiem tra Cloudinary va thu lai.", "error");
     } finally {
       setIsUploading(false);
     }
@@ -336,39 +373,73 @@ function AdminProductDetail({ product, token, setMessage, onBack, onSave }) {
       <div className="admin-detail-layout">
         <form className="panel form admin-form product-detail-form" onSubmit={submit}>
           <h2>Thong tin san pham</h2>
+          {isNew ? (
+            <label>
+              productId
+              <input value="Tu dong tao khi luu" disabled />
+            </label>
+          ) : (
+            <label>
+              productId
+              <input value={form.productId} disabled />
+            </label>
+          )}
           <label>
-            productId
-            <input
-              value={form.productId}
-              disabled={!isNew}
-              onChange={(event) => update("productId", event.target.value)}
+            name
+            <input value={form.name || ""} onChange={(event) => update("name", event.target.value)} required />
+          </label>
+          <label>
+            description
+            <textarea
+              value={form.description || ""}
+              onChange={(event) => update("description", event.target.value)}
+              rows={5}
               required
             />
           </label>
-          {["name", "description", "category", "imageUrl", "unit", "origin"].map((field) => (
-            <label key={field}>
-              {field}
-              <input value={form[field] || ""} onChange={(event) => update(field, event.target.value)} required />
+          <div className="form-grid-3">
+            <label>
+              category
+              <input value={form.category || ""} onChange={(event) => update("category", event.target.value)} required />
             </label>
-          ))}
-          <label>
-            upload anh Cloudinary
-            <span className="file-upload">
-              <input type="file" accept="image/*" onChange={(event) => void uploadImage(event.target.files?.[0])} />
-              <button type="button" disabled={isUploading}>
+            <label>
+              unit
+              <input value={form.unit || ""} onChange={(event) => update("unit", event.target.value)} required />
+            </label>
+            <label>
+              origin
+              <input value={form.origin || ""} onChange={(event) => update("origin", event.target.value)} required />
+            </label>
+          </div>
+          <div className="image-upload-field">
+            <span>anh san pham</span>
+            <div className="image-upload-box compact">
+              <label className="file-upload-button">
+                <input type="file" accept="image/*" onChange={(event) => void uploadImage(event.target.files?.[0])} />
                 {isUploading ? <Loader2 className="spin" size={18} /> : <Upload size={18} />}
                 {isUploading ? "Dang upload" : "Chon anh"}
-              </button>
-            </span>
-          </label>
-          <label>
-            price
-            <input type="number" value={form.price} onChange={(event) => update("price", event.target.value)} required />
-          </label>
-          <label>
-            stock
-            <input type="number" value={form.stock} onChange={(event) => update("stock", event.target.value)} required />
-          </label>
+              </label>
+              <input
+                value={form.imageUrl || ""}
+                onChange={(event) => update("imageUrl", event.target.value)}
+                placeholder="Cloudinary URL se tu dien sau khi upload"
+                required
+              />
+              <span className={form.imageUrl ? "upload-status done" : "upload-status"}>
+                {form.imageUrl ? uploadedFileName || "Da co anh san pham" : "Chua upload anh"}
+              </span>
+            </div>
+          </div>
+          <div className="form-grid-2">
+            <label>
+              price
+              <input value={form.price} onChange={(event) => update("price", event.target.value)} inputMode="decimal" required />
+            </label>
+            <label>
+              stock
+              <input value={form.stock} onChange={(event) => update("stock", event.target.value)} inputMode="numeric" required />
+            </label>
+          </div>
           <label>
             active
             <select value={String(form.active !== false)} onChange={(event) => update("active", event.target.value === "true")}>
@@ -376,7 +447,7 @@ function AdminProductDetail({ product, token, setMessage, onBack, onSave }) {
               <option value="false">An san pham</option>
             </select>
           </label>
-          <button>Luu thay doi</button>
+          <button disabled={isUploading}>{isUploading ? "Dang upload anh" : "Luu thay doi"}</button>
         </form>
 
         <aside className="panel product-preview">
