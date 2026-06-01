@@ -36,18 +36,17 @@ export class CreateOrderHandler {
   }
 
   async execute(command) {
-    const products = await this.redis.hgetall(config.projectionProductsKey);
+    const products = await this.loadProductLookup();
     const pricedItems = command.input.items.map((item) => {
       const product = products[item.productId];
       if (!product) {
         throw new Error(`Product ${item.productId} not found`);
       }
 
-      const parsed = JSON.parse(product);
       return {
         ...item,
-        name: parsed.name,
-        price: parsed.price
+        name: product.name,
+        price: product.price
       };
     });
 
@@ -92,5 +91,31 @@ export class CreateOrderHandler {
     });
 
     return { orderId, total };
+  }
+
+  async loadProductLookup() {
+    const rawProducts = await this.redis.hgetall(config.projectionProductsKey);
+    const products = Object.fromEntries(
+      Object.entries(rawProducts).map(([productId, raw]) => [productId, JSON.parse(raw)])
+    );
+
+    try {
+      const response = await fetch(`${config.productServiceUrl}/products`);
+      if (!response.ok) {
+        return products;
+      }
+
+      const liveProducts = await response.json();
+      for (const product of liveProducts) {
+        const productId = product.productId || product.id;
+        if (productId) {
+          products[productId] = product;
+        }
+      }
+    } catch (error) {
+      console.warn("failed to load product fallback for order pricing:", error?.message || error);
+    }
+
+    return products;
   }
 }
