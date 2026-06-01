@@ -25,13 +25,15 @@ export function ProfilePage({ user, token, saveSession, setMessage }) {
         });
         result = await response.json().catch(() => ({}));
       } catch {
-        setMessage("user-service dang tam ngung. Thong tin ca nhan tam thoi chua dong bo.", "warning");
+        setMessage("user-service đang tạm ngưng. Thông tin cá nhân tạm thời chưa đồng bộ.", "warning");
         return;
       }
+
       if (!response.ok) {
-        setMessage(result.error || "Khong tai duoc thong tin ca nhan.", "warning");
+        setMessage(result.error || "Không tải được thông tin cá nhân.", "warning");
         return;
       }
+
       setForm({
         name: result.user.name || "",
         email: result.user.email || "",
@@ -55,6 +57,7 @@ export function ProfilePage({ user, token, saveSession, setMessage }) {
 
   async function submit(event) {
     event.preventDefault();
+
     let response;
     let result;
     try {
@@ -72,22 +75,24 @@ export function ProfilePage({ user, token, saveSession, setMessage }) {
       });
       result = await readJsonResponse(response);
     } catch {
-      setMessage("user-service dang tam ngung. Khong cap nhat duoc thong tin.", "warning");
+      setMessage("user-service đang tạm ngưng. Không cập nhật được thông tin.", "warning");
       return;
     }
+
     if (!response.ok) {
-      setMessage(result.error || "Khong cap nhat duoc thong tin.", "error");
+      setMessage(result.error || "Không cập nhật được thông tin.", "error");
       return;
     }
 
     saveSession(result.user, result.token);
-    setMessage("Da cap nhat thong tin ca nhan.", "success");
+    setMessage("Đã cập nhật thông tin cá nhân.", "success");
   }
 
   async function submitPassword(event) {
     event.preventDefault();
+
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setMessage("Mat khau moi khong khop.", "warning");
+      setMessage("Mật khẩu mới không khớp.", "warning");
       return;
     }
 
@@ -107,92 +112,134 @@ export function ProfilePage({ user, token, saveSession, setMessage }) {
       });
       result = await readJsonResponse(response);
     } catch {
-      setMessage("user-service dang tam ngung. Khong cap nhat duoc mat khau.", "warning");
+      setMessage("user-service đang tạm ngưng. Không cập nhật được mật khẩu.", "warning");
       return;
     }
+
     if (!response.ok) {
-      setMessage(result.error || "Khong cap nhat duoc mat khau.", "error");
+      setMessage(result.error || "Không cập nhật được mật khẩu.", "error");
       return;
     }
 
     setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    setMessage("Da cap nhat mat khau.", "success");
+    setMessage("Đã cập nhật mật khẩu.", "success");
   }
 
   return (
-    <section className="profile-layout">
-      <div className="profile-summary">
-        <UserRound size={42} />
-        <div>
-          <p className="eyebrow">Tai khoan khach hang</p>
-          <h1>Thong tin ca nhan</h1>
-          <span>{form.email}</span>
+    <main className="container py-4 py-lg-5">
+      <section className="card border-0 shadow-sm rounded-5 mb-4">
+        <div className="card-body p-4 d-flex flex-column flex-md-row align-items-md-center gap-3">
+          <div className="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center p-3">
+            <UserRound size={42} />
+          </div>
+
+          <div>
+            <span className="badge rounded-pill text-bg-success mb-2">Tài khoản khách hàng</span>
+            <h1 className="fw-bold mb-1">Thông tin cá nhân</h1>
+            <p className="text-secondary mb-0">{form.email}</p>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="profile-forms">
-        <form className="panel form profile-form" onSubmit={submit}>
-          <h2>Thong tin nguoi dung</h2>
-          <label>
-            Ho ten
-            <input value={form.name} onChange={(event) => update("name", event.target.value)} required />
-          </label>
-          <label>
-            Email
-            <input type="email" value={form.email} disabled />
-          </label>
-          <label>
-            So dien thoai
-            <input value={form.phone} onChange={(event) => update("phone", event.target.value)} />
-          </label>
-          <label>
-            Dia chi giao hang mac dinh
-            <input value={form.address} onChange={(event) => update("address", event.target.value)} />
-          </label>
-          <button>
-            <Save size={18} />
-            Luu thong tin
-          </button>
-        </form>
+      <section className="row g-4">
+        <div className="col-lg-7">
+          <form className="card border-0 shadow-sm rounded-5 h-100" onSubmit={submit}>
+            <div className="card-body p-4">
+              <h2 className="h4 fw-bold mb-4">Thông tin người dùng</h2>
 
-        <form className="panel form profile-form" onSubmit={submitPassword}>
-          <h2><KeyRound size={20} /> Doi mat khau</h2>
-          <label>
-            Mat khau hien tai
-            <input
-              type="password"
-              value={passwordForm.currentPassword}
-              onChange={(event) => updatePassword("currentPassword", event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Mat khau moi
-            <input
-              type="password"
-              value={passwordForm.newPassword}
-              onChange={(event) => updatePassword("newPassword", event.target.value)}
-              required
-              minLength={6}
-            />
-          </label>
-          <label>
-            Nhap lai mat khau moi
-            <input
-              type="password"
-              value={passwordForm.confirmPassword}
-              onChange={(event) => updatePassword("confirmPassword", event.target.value)}
-              required
-              minLength={6}
-            />
-          </label>
-          <button>
-            <KeyRound size={18} />
-            Cap nhat mat khau
-          </button>
-        </form>
-      </div>
-    </section>
+              <div className="mb-3">
+                <label className="form-label fw-semibold">Họ tên</label>
+                <input
+                  className="form-control form-control-lg"
+                  value={form.name}
+                  onChange={(event) => update("name", event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-semibold">Email</label>
+                <input className="form-control form-control-lg" type="email" value={form.email} disabled />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-semibold">Số điện thoại</label>
+                <input
+                  className="form-control form-control-lg"
+                  value={form.phone}
+                  onChange={(event) => update("phone", event.target.value)}
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="form-label fw-semibold">Địa chỉ giao hàng mặc định</label>
+                <input
+                  className="form-control form-control-lg"
+                  value={form.address}
+                  onChange={(event) => update("address", event.target.value)}
+                />
+              </div>
+
+              <button className="btn btn-success btn-lg rounded-pill px-4">
+                <Save size={18} className="me-2" />
+                Lưu thông tin
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="col-lg-5">
+          <form className="card border-0 shadow-sm rounded-5 h-100" onSubmit={submitPassword}>
+            <div className="card-body p-4">
+              <h2 className="h4 fw-bold mb-4">
+                <KeyRound size={22} className="me-2 text-success" />
+                Đổi mật khẩu
+              </h2>
+
+              <div className="mb-3">
+                <label className="form-label fw-semibold">Mật khẩu hiện tại</label>
+                <input
+                  className="form-control form-control-lg"
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(event) => updatePassword("currentPassword", event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-semibold">Mật khẩu mới</label>
+                <input
+                  className="form-control form-control-lg"
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(event) => updatePassword("newPassword", event.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="form-label fw-semibold">Nhập lại mật khẩu mới</label>
+                <input
+                  className="form-control form-control-lg"
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(event) => updatePassword("confirmPassword", event.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <button className="btn btn-outline-success btn-lg rounded-pill px-4">
+                <KeyRound size={18} className="me-2" />
+                Cập nhật mật khẩu
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
   );
 }
 
@@ -201,6 +248,6 @@ async function readJsonResponse(response) {
   try {
     return text ? JSON.parse(text) : {};
   } catch {
-    return { error: "API khong tra ve JSON. Kiem tra backend/gateway da restart chua." };
+    return { error: "API không trả về JSON. Kiểm tra backend/gateway đã restart chưa." };
   }
 }

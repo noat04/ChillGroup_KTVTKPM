@@ -56,20 +56,20 @@ export function ProductListPage({ products, addToCart, loadProducts, setMessage,
       const response = await fetch(`${apiBaseUrl}/products/seed`, { method: "POST" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(result.error || "Khong seed duoc san pham. Vui long thu lai.", "warning");
+        setMessage(result.error || "Không seed được sản phẩm. Vui lòng thử lại.", "warning");
         return;
       }
-      setMessage("Da seed san pham vao MongoDB.", "success");
+      setMessage("Đã seed sản phẩm vào MongoDB.", "success");
       setTimeout(loadProducts, 600);
     } catch {
-      setMessage("product-service dang tam ngung. Vui long thu lai sau.", "warning");
+      setMessage("product-service đang tạm ngưng. Vui lòng thử lại sau.", "warning");
     }
   }
 
   async function askAi(event) {
     event.preventDefault();
     if (aiPrompt.trim().length < 3) {
-      setMessage("Nhap mo ta san pham can tim.", "warning");
+      setMessage("Nhập mô tả sản phẩm cần tìm.", "warning");
       return;
     }
 
@@ -82,100 +82,145 @@ export function ProductListPage({ products, addToCart, loadProducts, setMessage,
       });
       const result = await response.json();
       if (!response.ok) {
-        setMessage(result.error || "AI khong goi y duoc san pham.", "error");
+        setMessage(result.error || "AI không gợi ý được sản phẩm.", "error");
         return;
       }
       setAiResults(result.products || []);
       setAiCriteria(result.criteria || null);
       if ((result.products || []).length === 0) {
-        setMessage("AI chua tim thay san pham phu hop. Thu mo ta ngan hon hoac bo bot dieu kien gia/xuat xu.", "warning");
+        setMessage("AI chưa tìm thấy sản phẩm phù hợp. Thử mô tả ngắn hơn hoặc bỏ bớt điều kiện giá/xuất xứ.", "warning");
         return;
       }
-      setMessage(`AI tim thay ${(result.products || []).length} san pham phu hop.`, "success");
+      setMessage(`AI tìm thấy ${(result.products || []).length} sản phẩm phù hợp.`, "success");
     } catch {
-      setMessage("AI dang khong san sang. Vui long thu lai sau.", "error");
+      setMessage("AI đang không sẵn sàng. Vui lòng thử lại sau.", "error");
     } finally {
       setIsAiLoading(false);
     }
   }
 
   return (
-    <>
-      <section className="page-heading">
-        <p className="eyebrow">Trai ngon hom nay</p>
-        <h1>Danh sach san pham</h1>
-        <span>Chon trai cay tuoi, gio qua va cac san pham theo mua.</span>
-      </section>
-      <section className="panel ai-search-panel">
+    <main className="container py-4 py-lg-5">
+      <section className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
         <div>
-          <p className="eyebrow">Gemini AI</p>
-          <h2>Goi y san pham bang mo ta</h2>
+          <span className="badge rounded-pill text-bg-success mb-2">Trái ngon hôm nay</span>
+          <h1 className="display-6 fw-bold text-success mb-2">Danh sách sản phẩm</h1>
+          <p className="text-secondary mb-0">Chọn trái cây tươi, giỏ quà và các sản phẩm theo mùa.</p>
         </div>
-        <form className="ai-search-form" onSubmit={askAi}>
-          <label className="search">
-            <Sparkles size={18} />
-            <input
-              placeholder="VD: cac loai cam moi hom nay co xuat xu tu Da Lat, gia 50000 den 100000"
-              value={aiPrompt}
-              onChange={(event) => setAiPrompt(event.target.value)}
-            />
-          </label>
-          <button disabled={isAiLoading}>
-            {isAiLoading ? <Loader2 className="spin" size={18} /> : <Sparkles size={18} />}
-            Goi y
-          </button>
-        </form>
-        {aiCriteria ? (
-          <div className="ai-criteria">
-            <span>Tu khoa: {aiCriteria.keywords?.join(", ") || "khong co"}</span>
-            <span>Xuat xu: {aiCriteria.origins?.join(", ") || "tat ca"}</span>
-            <span>
-              Gia: {aiCriteria.minPrice ?? "bat ky"} - {aiCriteria.maxPrice ?? "bat ky"}
-            </span>
-          </div>
-        ) : null}
+
+        <button type="button" className="btn btn-outline-success rounded-pill px-4" onClick={loadProducts}>
+          <RefreshCw size={18} className="me-2" />
+          Tải lại
+        </button>
       </section>
-      {aiResults.length > 0 ? (
-        <section className="home-section">
-          <div className="section-heading">
-            <h2>San pham AI goi y</h2>
-            <button className="link-button" onClick={() => setAiResults([])}>An goi y</button>
+
+      <section className="card border-0 shadow-sm rounded-5 mb-4">
+        <div className="card-body p-4">
+          <div className="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-3">
+            <div>
+              <span className="badge rounded-pill text-bg-warning mb-2">
+                <Sparkles size={14} className="me-1" />
+                Gemini AI
+              </span>
+              <h2 className="h4 fw-bold mb-1">Gợi ý sản phẩm bằng mô tả</h2>
+              <p className="text-secondary mb-0">Nhập nhu cầu, AI sẽ lọc sản phẩm phù hợp.</p>
+            </div>
           </div>
-          <section className="products">
-            {aiResults.map((product) => (
-              <ProductCard key={`ai-${product.id || product.productId}`} product={product} addToCart={addToCart} openProductDetail={openProductDetail} />
-            ))}
-          </section>
-        </section>
-      ) : null}
-      <section className="filters product-tools">
-        <div className="tabs">
-          {categories.map((item) => (
-            <button className={item === category ? "active" : ""} key={item} onClick={() => updateCategory(item)}>
-              {item}
+
+          <form className="row g-3" onSubmit={askAi}>
+            <div className="col-lg-10">
+              <div className="input-group input-group-lg">
+                <span className="input-group-text bg-white">
+                  <Sparkles size={18} />
+                </span>
+                <input
+                  className="form-control"
+                  placeholder="VD: các loại cam mới hôm nay có xuất xứ từ Đà Lạt, giá 50000 đến 100000"
+                  value={aiPrompt}
+                  onChange={(event) => setAiPrompt(event.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="col-lg-2">
+              <button className="btn btn-success btn-lg rounded-pill w-100" disabled={isAiLoading}>
+                {isAiLoading ? <Loader2 size={18} className="me-2" /> : <Sparkles size={18} className="me-2" />}
+                Gợi ý
+              </button>
+            </div>
+          </form>
+
+          {aiCriteria && (
+            <div className="d-flex flex-wrap gap-2 mt-3">
+              <span className="badge text-bg-light border rounded-pill">Từ khóa: {aiCriteria.keywords?.join(", ") || "không có"}</span>
+              <span className="badge text-bg-light border rounded-pill">Xuất xứ: {aiCriteria.origins?.join(", ") || "tất cả"}</span>
+              <span className="badge text-bg-light border rounded-pill">Giá: {aiCriteria.minPrice ?? "bất kỳ"} - {aiCriteria.maxPrice ?? "bất kỳ"}</span>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {aiResults.length > 0 && (
+        <section className="mb-5">
+          <div className="d-flex justify-content-between align-items-end gap-3 mb-4">
+            <div>
+              <span className="badge text-bg-light border rounded-pill mb-2">AI đề xuất</span>
+              <h2 className="fw-bold text-success mb-0">Sản phẩm AI gợi ý</h2>
+            </div>
+            <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={() => setAiResults([])}>
+              Ẩn gợi ý
             </button>
-          ))}
-          <button onClick={loadProducts} title="Tai lai">
-            <RefreshCw size={18} />
-          </button>
-          <button onClick={seedProducts}>Seed</button>
+          </div>
+          <ProductGrid products={aiResults} addToCart={addToCart} openProductDetail={openProductDetail} />
+        </section>
+      )}
+
+      <section className="card border-0 shadow-sm rounded-5 mb-4">
+        <div className="card-body p-4">
+          <div className="row g-3 align-items-end">
+            <div className="col-lg-8">
+              <label className="form-label fw-semibold">Danh mục</label>
+              <div className="d-flex flex-wrap gap-2">
+                {categories.map((item) => (
+                  <button
+                    type="button"
+                    className={`btn rounded-pill ${item === category ? "btn-success" : "btn-outline-success"}`}
+                    key={item}
+                    onClick={() => updateCategory(item)}
+                  >
+                    {item === "Tat ca" ? "Tất cả" : item}
+                  </button>
+                ))}
+                <button type="button" className="btn btn-outline-secondary rounded-pill" onClick={seedProducts}>Seed</button>
+              </div>
+            </div>
+
+            <div className="col-lg-4">
+              <label className="form-label fw-semibold">Tìm kiếm</label>
+              <div className="input-group">
+                <span className="input-group-text bg-white">
+                  <Search size={18} />
+                </span>
+                <input
+                  className="form-control"
+                  placeholder="Tìm trái cây, xuất xứ..."
+                  value={query}
+                  onChange={(event) => updateQuery(event.target.value)}
+                />
+              </div>
+            </div>
+          </div>
         </div>
-        <label className="search">
-          <Search size={18} />
-          <input
-            placeholder="Tim trai cay, xuat xu..."
-            value={query}
-            onChange={(event) => updateQuery(event.target.value)}
-          />
-        </label>
       </section>
-      <section className="pagination-bar">
-        <span>
-          Hien thi {pagedProducts.length} / {visibleProducts.length} san pham
+
+      <section className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <span className="text-secondary">
+          Hiển thị {pagedProducts.length} / {visibleProducts.length} sản phẩm
         </span>
-        <label>
-          Moi trang
-          <select value={pageSize} onChange={(event) => updatePageSize(event.target.value)}>
+
+        <label className="d-flex align-items-center gap-2">
+          <span className="text-secondary text-nowrap">Mỗi trang</span>
+          <select className="form-select" value={pageSize} onChange={(event) => updatePageSize(event.target.value)}>
             <option value="8">8</option>
             <option value="12">12</option>
             <option value="16">16</option>
@@ -183,45 +228,106 @@ export function ProductListPage({ products, addToCart, loadProducts, setMessage,
           </select>
         </label>
       </section>
-      <section className="products">
-        {pagedProducts.map((product) => (
-          <ProductCard key={product.id} product={product} addToCart={addToCart} openProductDetail={openProductDetail} />
-        ))}
-      </section>
-      <nav className="pagination" aria-label="Phan trang san pham">
-        <button disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>
-          Truoc
-        </button>
-        {Array.from({ length: totalPages }, (_, index) => index + 1).map((item) => (
-          <button className={item === currentPage ? "active" : ""} key={item} onClick={() => setPage(item)}>
-            {item}
-          </button>
-        ))}
-        <button disabled={currentPage === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>
-          Sau
-        </button>
+
+      <ProductGrid products={pagedProducts} addToCart={addToCart} openProductDetail={openProductDetail} />
+
+      <nav className="d-flex justify-content-center mt-4" aria-label="Phân trang sản phẩm">
+        <ul className="pagination mb-0 flex-wrap">
+          <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+            <button className="page-link" onClick={() => setPage((value) => Math.max(1, value - 1))}>Trước</button>
+          </li>
+
+          {Array.from({ length: totalPages }, (_, index) => index + 1).map((item) => (
+            <li className={`page-item ${item === currentPage ? "active" : ""}`} key={item}>
+              <button className="page-link" onClick={() => setPage(item)}>{item}</button>
+            </li>
+          ))}
+
+          <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+            <button className="page-link" onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>Sau</button>
+          </li>
+        </ul>
       </nav>
-    </>
+    </main>
+  );
+}
+
+function ProductGrid({ products, addToCart, openProductDetail }) {
+  if (products.length === 0) {
+    return <div className="alert alert-light border rounded-4">Không có sản phẩm phù hợp.</div>;
+  }
+
+  return (
+    <section className="row g-4">
+      {products.map((product) => (
+        <div className="col-12 col-sm-6 col-lg-4 col-xl-3" key={product.id || product.productId}>
+          <ProductCard product={product} addToCart={addToCart} openProductDetail={openProductDetail} />
+        </div>
+      ))}
+    </section>
   );
 }
 
 function ProductCard({ product, addToCart, openProductDetail }) {
+  const isOutOfStock = Number(product.stock || 0) <= 0;
+
   return (
-    <article className="product clickable-product" role="button" tabIndex="0" onClick={() => openProductDetail(product)} onKeyDown={(event) => event.key === "Enter" && openProductDetail(product)}>
-      <img src={product.imageUrl} alt={product.name} />
-      <div className="product-body">
-        <h2>{product.name}</h2>
-        <p className="desc">{product.description}</p>
-        <div className="meta">
-          <span>{product.origin}</span>
-          <span>{product.category}</span>
+    <article className="card h-100 border-0 shadow-sm rounded-5 overflow-hidden">
+      <div
+        className="position-relative"
+        role="button"
+        tabIndex="0"
+        onClick={() => openProductDetail(product)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            openProductDetail(product);
+          }
+        }}
+      >
+        <div className="ratio ratio-4x3 bg-light">
+          <img src={product.imageUrl} alt={product.name} className="img-fluid object-fit-cover" />
         </div>
-        <p className="price">{formatMoney(product.price)}</p>
-        <span>Ton kho: {product.stock}</span>
-        <button disabled={product.stock === 0} onClick={(event) => { event.stopPropagation(); addToCart(product); }}>
-          <ShoppingCart size={18} />
-          Chon mua
+
+        <span className={`position-absolute top-0 start-0 m-3 badge rounded-pill ${isOutOfStock ? "text-bg-danger" : "text-bg-success"}`}>
+          {isOutOfStock ? "Hết hàng" : "Còn hàng"}
+        </span>
+      </div>
+
+      <div className="card-body d-flex flex-column p-4">
+        <button
+          type="button"
+          className="btn btn-link text-start text-dark text-decoration-none fw-bold fs-5 p-0 mb-2"
+          onClick={() => openProductDetail(product)}
+        >
+          {product.name}
         </button>
+
+        <p className="text-secondary small mb-3">
+          {product.description}
+        </p>
+
+        <div className="d-flex flex-wrap gap-2 mb-3">
+          <span className="badge text-bg-light border rounded-pill">{product.origin}</span>
+          <span className="badge text-bg-light border rounded-pill">{product.category}</span>
+        </div>
+
+        <div className="mt-auto">
+          <p className="fw-bold fs-5 text-danger mb-1">{formatMoney(product.price)}</p>
+          <p className="text-secondary small mb-3">Tồn kho: {product.stock}</p>
+
+          <button
+            type="button"
+            className="btn btn-success rounded-pill w-100"
+            disabled={isOutOfStock}
+            onClick={(event) => {
+              event.stopPropagation();
+              addToCart(product);
+            }}
+          >
+            <ShoppingCart size={18} className="me-2" />
+            Chọn mua
+          </button>
+        </div>
       </div>
     </article>
   );

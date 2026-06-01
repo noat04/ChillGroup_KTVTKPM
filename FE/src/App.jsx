@@ -14,6 +14,7 @@ import { ProductDetailPage } from "./pages/ProductDetailPage.jsx";
 import { ProductListPage } from "./pages/ProductListPage.jsx";
 import { ProfilePage } from "./pages/ProfilePage.jsx";
 import { readJson } from "./utils/storage.js";
+import "bootstrap/dist/css/bootstrap.min.css";
 
 export function App() {
   const [view, setView] = useState("home");
