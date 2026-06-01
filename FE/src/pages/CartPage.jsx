@@ -44,14 +44,14 @@ export function CartPage({ cartItems, user, updateCartQuantity, removeFromCart, 
       const response = await fetch(`${apiBaseUrl}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+        body: JSON.stringify({
         ...form,
         userId: user.id,
         customerEmail: user.email,
         items: cartItems.map((item) => ({ productId: item.id, quantity: item.quantity }))
       })
       });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         setMessage(result.error || "Khong tao duoc don hang", "error");
         return;
@@ -60,9 +60,17 @@ export function CartPage({ cartItems, user, updateCartQuantity, removeFromCart, 
       setMessage(`Da tao don ${result.orderId}.`, "success", 5000);
       setTimeout(async () => {
         await loadProducts();
-        const orderResponse = await fetch(`${apiBaseUrl}/orders/${result.orderId}`);
-        setLastOrder(await orderResponse.json());
+        try {
+          const orderResponse = await fetch(`${apiBaseUrl}/orders/${result.orderId}`);
+          if (orderResponse.ok) {
+            setLastOrder(await orderResponse.json());
+          }
+        } catch {
+          setMessage("Da tao don nhung tam thoi chua tai duoc chi tiet don.", "warning");
+        }
       }, 900);
+    } catch {
+      setMessage("order-service dang tam ngung. Don hang chua duoc tao, ban co the thu lai sau.", "warning");
     } finally {
       setIsCheckingOut(false);
     }

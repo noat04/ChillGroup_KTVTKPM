@@ -52,9 +52,18 @@ export function ProductListPage({ products, addToCart, loadProducts, setMessage,
   }
 
   async function seedProducts() {
-    await fetch(`${apiBaseUrl}/products/seed`, { method: "POST" });
-    setMessage("Da seed san pham vao MongoDB.", "success");
-    setTimeout(loadProducts, 600);
+    try {
+      const response = await fetch(`${apiBaseUrl}/products/seed`, { method: "POST" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setMessage(result.error || "Khong seed duoc san pham. Vui long thu lai.", "warning");
+        return;
+      }
+      setMessage("Da seed san pham vao MongoDB.", "success");
+      setTimeout(loadProducts, 600);
+    } catch {
+      setMessage("product-service dang tam ngung. Vui long thu lai sau.", "warning");
+    }
   }
 
   async function askAi(event) {

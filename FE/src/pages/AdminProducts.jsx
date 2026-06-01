@@ -28,20 +28,28 @@ export function AdminProducts({ token, loadProducts, setMessage, onUnauthorized 
   const [pageSize, setPageSize] = useState(10);
 
   async function adminFetch(path, options = {}) {
-    const response = await fetch(`${apiBaseUrl}${path}`, {
+    let response;
+    try {
+      response = await fetch(`${apiBaseUrl}${path}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
         ...(options.headers || {})
       }
-    });
+      });
+    } catch {
+      setMessage?.("Service dang tam ngung. Ban co the chuyen trang khac va thu lai.", "warning");
+      return null;
+    }
     if (response.status === 401) {
       setMessage("Phien dang nhap admin da het han. Vui long dang nhap lai.", "warning");
       onUnauthorized?.();
       return null;
     }
     if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      setMessage?.(result.error || "Khong tai duoc du lieu. Vui long thu lai.", response.status === 503 ? "warning" : "error");
       return null;
     }
     return response.json();

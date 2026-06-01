@@ -13,7 +13,7 @@ const statusTabs = [
   { value: "CANCELLED", label: "Da huy" }
 ];
 
-export function MyOrders({ token }) {
+export function MyOrders({ token, setMessage }) {
   const [orders, setOrders] = useState([]);
   const [status, setStatus] = useState("all");
   const [paymentStatus, setPaymentStatus] = useState("all");
@@ -21,10 +21,19 @@ export function MyOrders({ token }) {
   const [selectedOrder, setSelectedOrder] = useState(null);
 
   async function loadOrders() {
-    const response = await fetch(`${apiBaseUrl}/my/orders`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setOrders(await response.json());
+    try {
+      const response = await fetch(`${apiBaseUrl}/my/orders`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const result = await response.json().catch(() => []);
+      if (!response.ok) {
+        setMessage?.(result.error || "Khong tai duoc don hang. Vui long thu lai.", "warning");
+        return;
+      }
+      setOrders(Array.isArray(result) ? result : []);
+    } catch {
+      setMessage?.("order-service dang tam ngung. Ban co the thu lai sau.", "warning");
+    }
   }
 
   useEffect(() => {

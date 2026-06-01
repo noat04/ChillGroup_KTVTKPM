@@ -104,8 +104,24 @@ async function proxyJson(req, res, next, url, options = {}) {
     res.status(response.status).type(response.headers.get("content-type") || "application/json");
     res.send(text);
   } catch (error) {
-    next(error);
+    sendServiceUnavailable(res, serviceNameFromUrl(url));
   }
+}
+
+function serviceNameFromUrl(url) {
+  if (url.startsWith(productBaseUrl)) return "product-service";
+  if (url.startsWith(orderBaseUrl)) return "order-service";
+  if (url.startsWith(userBaseUrl)) return "user-service";
+  if (url.startsWith(inventoryBaseUrl)) return "inventory-service";
+  return "service";
+}
+
+function sendServiceUnavailable(res, serviceName) {
+  res.status(503).json({
+    error: `${serviceName} dang tam ngung. Vui long thu lai sau.`,
+    service: serviceName,
+    serviceUnavailable: true
+  });
 }
 
 /**
@@ -189,7 +205,11 @@ app.put("/api/cart", requireUser, (req, res, next) =>
 );
 
 app.get("/api/products", async (_req, res) => {
-  res.json(await loadActiveProducts());
+  try {
+    res.json(await loadActiveProducts());
+  } catch {
+    sendServiceUnavailable(res, "product-service");
+  }
 });
 
 /**
@@ -205,6 +225,9 @@ async function loadActiveProducts() {
 
   if (products.length === 0) {
     const response = await fetch(`${productBaseUrl}/products`);
+    if (!response.ok) {
+      throw new Error("product-service unavailable");
+    }
     products = await response.json();
   }
 
@@ -246,7 +269,7 @@ app.post("/api/products", requireAdmin, async (req, res, next) => {
 
     res.status(response.status).json(await response.json());
   } catch (error) {
-    next(error);
+    sendServiceUnavailable(res, "product-service");
   }
 });
 
@@ -693,7 +716,7 @@ app.post("/api/products/seed", async (_req, res, next) => {
 
     res.status(response.status).json(await response.json());
   } catch (error) {
-    next(error);
+    sendServiceUnavailable(res, "product-service");
   }
 });
 
@@ -792,7 +815,7 @@ app.post("/api/orders", async (req, res, next) => {
 
     res.status(response.status).json(await response.json());
   } catch (error) {
-    next(error);
+    sendServiceUnavailable(res, "order-service");
   }
 });
 
@@ -801,7 +824,7 @@ app.get("/api/orders/:id", async (req, res, next) => {
     const response = await fetch(`${orderBaseUrl}/orders/${req.params.id}`);
     res.status(response.status).json(await response.json());
   } catch (error) {
-    next(error);
+    sendServiceUnavailable(res, "order-service");
   }
 });
 

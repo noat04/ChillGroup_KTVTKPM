@@ -17,13 +17,21 @@ export function ProfilePage({ user, token, saveSession, setMessage }) {
 
   useEffect(() => {
     async function loadProfile() {
-      const response = await fetch(`${apiBaseUrl}/auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!response.ok) {
+      let response;
+      let result;
+      try {
+        response = await fetch(`${apiBaseUrl}/auth/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        result = await response.json().catch(() => ({}));
+      } catch {
+        setMessage("user-service dang tam ngung. Thong tin ca nhan tam thoi chua dong bo.", "warning");
         return;
       }
-      const result = await response.json();
+      if (!response.ok) {
+        setMessage(result.error || "Khong tai duoc thong tin ca nhan.", "warning");
+        return;
+      }
       setForm({
         name: result.user.name || "",
         email: result.user.email || "",
@@ -47,19 +55,26 @@ export function ProfilePage({ user, token, saveSession, setMessage }) {
 
   async function submit(event) {
     event.preventDefault();
-    const response = await fetch(`${apiBaseUrl}/auth/profile`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        name: form.name,
-        phone: form.phone,
-        address: form.address
-      })
-    });
-    const result = await readJsonResponse(response);
+    let response;
+    let result;
+    try {
+      response = await fetch(`${apiBaseUrl}/auth/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone,
+          address: form.address
+        })
+      });
+      result = await readJsonResponse(response);
+    } catch {
+      setMessage("user-service dang tam ngung. Khong cap nhat duoc thong tin.", "warning");
+      return;
+    }
     if (!response.ok) {
       setMessage(result.error || "Khong cap nhat duoc thong tin.", "error");
       return;
@@ -76,18 +91,25 @@ export function ProfilePage({ user, token, saveSession, setMessage }) {
       return;
     }
 
-    const response = await fetch(`${apiBaseUrl}/auth/password`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword
-      })
-    });
-    const result = await readJsonResponse(response);
+    let response;
+    let result;
+    try {
+      response = await fetch(`${apiBaseUrl}/auth/password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+      result = await readJsonResponse(response);
+    } catch {
+      setMessage("user-service dang tam ngung. Khong cap nhat duoc mat khau.", "warning");
+      return;
+    }
     if (!response.ok) {
       setMessage(result.error || "Khong cap nhat duoc mat khau.", "error");
       return;

@@ -37,14 +37,21 @@ export function AuthPage({ mode, saveSession, setMessage }) {
       return;
     }
 
-    const response = await fetch(`${apiBaseUrl}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    const result = await response.json();
+    let response;
+    let result;
+    try {
+      response = await fetch(`${apiBaseUrl}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      result = await response.json().catch(() => ({}));
+    } catch {
+      setMessage("user-service dang tam ngung. Ban co the qua trang khac va thu lai sau.", "warning");
+      return;
+    }
     if (!response.ok) {
-      setMessage(result.error || "Thao tac that bai", "error");
+      setMessage(result.error || "Thao tac that bai", response.status === 503 ? "warning" : "error");
       return;
     }
     if (result.token) {

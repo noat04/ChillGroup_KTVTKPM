@@ -45,8 +45,17 @@ export function App() {
   }, [message]);
 
   async function loadProducts() {
-    const response = await fetch(`${apiBaseUrl}/products`);
-    setProducts(await response.json());
+    try {
+      const response = await fetch(`${apiBaseUrl}/products`);
+      const result = await response.json().catch(() => []);
+      if (!response.ok) {
+        setMessage(result.error || "Khong tai duoc san pham. Vui long thu lai.", "warning");
+        return;
+      }
+      setProducts(Array.isArray(result) ? result : []);
+    } catch {
+      setMessage("Gateway hoac product-service dang tam ngung. Ban van co the qua trang khac va thu lai.", "warning");
+    }
   }
 
   function openProducts(category = "Tat ca") {
@@ -82,14 +91,20 @@ export function App() {
   }, [isAdmin, token, view]);
 
   async function loadServerCart() {
-    const response = await fetch(`${apiBaseUrl}/cart`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!response.ok) {
+    let result;
+    try {
+      const response = await fetch(`${apiBaseUrl}/cart`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setMessage(result.error || "Khong dong bo duoc gio hang. Vui long thu lai.", "warning");
+        return;
+      }
+    } catch {
+      setMessage("user-service dang tam ngung, gio hang tam thoi chua dong bo.", "warning");
       return;
     }
-
-    const result = await response.json();
     const serverCart = Object.fromEntries(
       (result.items || []).map((item) => [item.productId, item.quantity])
     );
@@ -108,16 +123,24 @@ export function App() {
       return;
     }
 
-    await fetch(`${apiBaseUrl}/cart`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        items: Object.entries(nextCart).map(([productId, quantity]) => ({ productId, quantity }))
-      })
-    });
+    try {
+      const response = await fetch(`${apiBaseUrl}/cart`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          items: Object.entries(nextCart).map(([productId, quantity]) => ({ productId, quantity }))
+        })
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        setMessage(result.error || "Chua dong bo duoc gio hang len server.", "warning");
+      }
+    } catch {
+      setMessage("user-service dang tam ngung, gio hang se duoc giu tren may nay.", "warning");
+    }
   }
 
   function saveSession(nextUser, nextToken) {
@@ -274,7 +297,7 @@ export function App() {
           setView={setView}
         />
       ) : null}
-      {view === "orders" && user ? <MyOrders token={token} /> : null}
+      {view === "orders" && user ? <MyOrders token={token} setMessage={setMessage} /> : null}
       {view === "profile" && user ? (
         <ProfilePage user={user} token={token} saveSession={saveSession} setMessage={setMessage} />
       ) : null}
