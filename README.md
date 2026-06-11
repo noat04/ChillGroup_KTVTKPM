@@ -1,165 +1,196 @@
-# Fruitweb
+# 🍓 Fruitweb — Website Bán Trái Cây Đa Tầng (Microservices)
 
-Web ban trai cay bang JavaScript theo huong microservice, event-driven, CQRS va space-based read model tren Redis.
+> Đồ án môn **Kiến trúc và Thiết kế Phần mềm**  
+> Trường Đại học Công nghiệp TP.HCM — Nhóm Chill Group
 
-## Kien truc
+**Thành viên:**
+- Nguyễn Danh Minh Toàn — 22645251
+- Phạm Như Ý — 22644931
+- Trần Quốc Đảm — 22642101
 
-- `FE`: ReactJS + Vite JavaScript client cho khach mua trai cay.
-- `BE/apps/gateway`: Node.js Express API gateway cho frontend.
-- `BE/apps/user-service`: dang ky, dang nhap, JWT, quen mat khau va reset password qua email.
-- `BE/apps/product-service`: Node.js Express service quan ly san pham, luu MongoDB, publish `ProductUpserted`.
-- `BE/apps/inventory-service`: worker quan ly ton kho trong MongoDB, cache stock tren Redis, subscribe order events.
-- `BE/apps/order-service`: Node.js Express command side tao don hang, luu MongoDB, publish `OrderCreated`.
-- `BE/apps/projection-service`: worker query side, build Redis projections cho product list.
-- `BE/packages/shared`: config, Redis client, Redis Streams event bus, Express helpers.
+---
 
-MongoDB duoc dung lam database , luu ben vung tren may thong qua Docker volume:
+## 📌 Giới Thiệu
 
-- `fruitweb_products`: san pham.
-- `fruitweb_inventory`: ton kho.
-- `fruitweb_orders`: don hang.
-- `fruitweb_users`: tai khoan khach hang/admin va token reset mat khau.
+**Fruitweb** là nền tảng thương mại điện tử bán trái cây, được xây dựng theo kiến trúc **Microservices** kết hợp **Event-Driven Architecture** và **CQRS** (Command Query Responsibility Segregation). Hệ thống tách biệt hoàn toàn tầng giao diện và tầng nghiệp vụ, sử dụng Redis làm event bus và read model để tối ưu hiệu suất đọc dữ liệu.
 
-Redis duoc dung theo 3 vai tro:
+---
 
-1. Event backbone: Redis Streams.
-2. Space-based data grid: hash/cache/projection nam trong Redis.
-3. CQRS query store: frontend doc nhanh qua gateway tu Redis projection.
+## 🛠️ Công Nghệ Sử Dụng
 
-## Chay local
+### Frontend
 
-```powershell
-docker compose up -d mongo redis
-cd BE
-npm install
-npm run dev
+| Công nghệ | Mục đích |
+|---|---|
+| React + Vite | Giao diện người dùng (SPA) |
+| React Router | Điều hướng client-side |
+| JavaScript / CSS | Ngôn ngữ & styling |
+
+### Backend (Microservices)
+
+| Service | Công nghệ | Trách nhiệm |
+|---|---|---|
+| API Gateway | Node.js / Express | Điểm vào duy nhất, xác thực JWT, rate limiting, định tuyến |
+| User Service | Node.js / Express + MongoDB | Đăng ký, đăng nhập, quản lý hồ sơ |
+| Product Service (Catalog) | Node.js / Express + MongoDB | Quản lý danh mục sản phẩm |
+| Order Service | Node.js / Express + MongoDB | Tạo và quản lý đơn hàng |
+| Inventory Service | Node.js / Express + MongoDB | Quản lý tồn kho, xử lý giữ hàng |
+| Projection Service | Node.js / Express + Redis | Dựng read model sản phẩm lên Redis |
+
+### Thư viện & Công cụ Backend
+
+| Công nghệ | Mục đích |
+|---|---|
+| Mongoose | ODM cho MongoDB |
+| JWT | Xác thực người dùng |
+| bcrypt | Mã hóa mật khẩu |
+| Zod | Validation dữ liệu đầu vào |
+| Nodemailer (SMTP) | Gửi email OTP, hóa đơn COD |
+| Cloudinary | Lưu trữ hình ảnh sản phẩm |
+| Google Gemini API | Gợi ý sản phẩm bằng AI |
+
+### Database
+
+| Database | Vai trò |
+|---|---|
+| MongoDB Atlas | Database chính cho từng service (database-per-service) |
+| Redis (Hash) | Read model `projection:products` — tối ưu truy vấn sản phẩm |
+| Redis Streams | Event bus bất đồng bộ giữa các service |
+
+**Các database MongoDB riêng biệt theo service:**
+`fruitweb_users` · `fruitweb_catalog` · `fruitweb_orders` · `fruitweb_inventory`
+
+### DevOps & Infrastructure
+
+| Công nghệ | Mục đích |
+|---|---|
+| Docker Compose | Orchestration MongoDB + Redis local |
+| `.env` per service | Cấu hình môi trường tách biệt (port, DB, Redis, JWT, SMTP, Cloudinary, Gemini) |
+| Agile/Scrum | Quản lý tiến độ: backlog, sprint planning, phân công nhiệm vụ |
+
+---
+
+## 🏗️ Kiến Trúc Hệ Thống
+
+**Kiểu kiến trúc:** Microservices + Event-Driven + CQRS
+
+```
+┌─────────────────────────────────────────┐
+│           React Frontend (Vite)         │
+└───────────────────┬─────────────────────┘
+                    │ REST API
+         ┌──────────▼──────────┐
+         │     API Gateway     │
+         │  JWT · Rate Limit   │
+         │  Auth · Routing     │
+         └──┬──────┬──────┬───┘
+            │      │      │
+   ┌────────▼─┐ ┌──▼───┐ ┌▼──────────┐
+   │  User    │ │Product│ │  Order    │
+   │ Service  │ │Service│ │ Service   │
+   └────┬─────┘ └──┬────┘ └─────┬────┘
+        │          │             │
+        │    ┌─────▼──────┐      │
+        │    │ Projection │      │
+        │    │  Service   │      │
+        │    └─────┬──────┘      │
+        │          │             │
+   ┌────▼──────────▼─────────────▼────┐
+   │              Redis               │
+   │  Hash: projection:products       │
+   │  Streams: Event Bus              │
+   └──────────────────────────────────┘
+        │          │             │
+   ┌────▼──┐  ┌────▼──┐  ┌──────▼──────┐
+   │Mongo  │  │Mongo  │  │  Inventory  │
+   │_users │  │_catalog  │  Service    │
+   └───────┘  └────────┘ └─────────────┘
 ```
 
-Mo terminal khac:
+### Luồng sự kiện chính (Event Flow)
 
-```powershell
-cd FE
-npm install
-npm run dev
+```
+[Admin tạo/sửa sản phẩm]
+  → Product Service lưu MongoDB
+  → Phát sự kiện: ProductUpserted
+    → Inventory Service: cập nhật InventoryItem
+    → Projection Service: cập nhật Redis projection:products
+
+[Khách hàng đặt hàng]
+  → Order Service đọc sản phẩm từ Redis projection (nhanh)
+  → Lưu đơn hàng MongoDB (trạng thái: PENDING_INVENTORY)
+  → Phát sự kiện: OrderCreated
+    → Inventory Service kiểm tra & giữ hàng
+      → Đủ hàng: phát InventoryReserved → Order: PENDING_CONFIRMATION
+      → Thiếu hàng: phát InventoryRejected → Order: REJECTED
 ```
 
-Mac dinh:
+---
 
-- Frontend: `http://localhost:5173`
-- Gateway: `http://localhost:8080`
-- User service: `http://localhost:8083`
-- Inventory service: `http://localhost:8084`
-- Redis: `localhost:6379`
-- MongoDB: `localhost:27017`
+## ✅ Chức Năng Chính
 
-## API chinh
+### 👤 Khách vãng lai
+- Xem danh sách sản phẩm đang hoạt động
+- Đăng ký tài khoản
+- Đăng nhập, quên mật khẩu (OTP qua email)
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
-- `GET /api/products`
-- `POST /api/products`
-- `POST /api/products/seed`
-- `POST /api/orders`
-- `GET /api/orders/:id`
-- `GET /api/admin/products`
-- `GET /api/admin/inventory`
-- `GET /api/admin/orders`
-- `GET /api/admin/reports`
-- `GET /api/health`
+### 🛒 Khách hàng
+- Đăng nhập bằng JWT, xem & cập nhật hồ sơ cá nhân
+- Đổi mật khẩu
+- Quản lý giỏ hàng: thêm, cập nhật số lượng, xóa sản phẩm
+- Đặt hàng với thông tin giao hàng & phương thức thanh toán (COD, ...)
+- Xem danh sách đơn hàng & chi tiết trạng thái đơn
 
-Tai khoan dau tien dang ky se tu dong la `admin`. Cac tai khoan sau mac dinh la `customer`.
+### 🛡️ Quản trị viên (Admin)
+- Quản lý sản phẩm: thêm, sửa, xóa mềm (`active = false`)
+- Quản lý tồn kho theo từng `productId`
+- Xem & cập nhật trạng thái đơn hàng
+- Quản lý người dùng: xem, thêm, sửa, xóa tài khoản
+- Dashboard báo cáo: tổng đơn, doanh thu, thống kê theo trạng thái, đơn gần đây
 
-Quen mat khau:
+### ⚙️ Hệ thống nền (Background)
+- Đồng bộ sản phẩm qua event `ProductUpserted` → cập nhật Inventory & Redis projection
+- Xử lý tồn kho bất đồng bộ khi đặt hàng qua Redis Streams
+- Gợi ý sản phẩm bằng **Google Gemini AI**
 
-- Neu cau hinh SMTP trong `BE/.env`, service se gui mail that.
-- Neu chua cau hinh SMTP, backend se log reset link va response tra `resetLink` de test local.
+---
 
-## Quan ly du an Agile/Scrum
+## 🔒 Bảo Mật
 
-Du an ap dung Scrum nhe, chia cong viec theo backlog, sprint va task ro rang de nhom co the theo doi tien do khi phat trien Fruitweb.
+- **JWT** xác thực tại API Gateway, phân quyền `customer` / `admin`
+- **bcrypt** mã hóa mật khẩu người dùng
+- **Rate limiting** tại Gateway để chống spam
+- Dữ liệu nhạy cảm (mật khẩu, reset token) không trả về client
+- Xóa sản phẩm theo dạng **soft delete** để bảo toàn lịch sử đơn hàng
 
-Vai tro:
+---
 
-- Product Owner: quan ly yeu cau, uu tien product backlog va chap nhan ket qua sprint.
-- Scrum Master: theo doi tien do, go bo blocker, dam bao nhom cap nhat task hang ngay.
-- Development Team: thiet ke, lap trinh, test va demo cac tinh nang trong sprint.
+## 🚀 Hướng Phát Triển Tương Lai
 
-Product backlog:
+### DevOps & Production-Ready
+- **Docker hóa toàn bộ** frontend + backend services với `restart policy` và `healthcheck`
+- **CI/CD với GitHub Actions** — tự động test, build, deploy
+- **Load balancer + replica** cho các service quan trọng (Gateway, Order, Inventory)
+- **Monitoring:** Prometheus + Grafana
+- **Logging tập trung:** ELK Stack hoặc Loki
 
-| ID | User story | Uu tien | Trang thai |
-| --- | --- | --- | --- |
-| PB-01 | La khach hang, toi muon dang ky/dang nhap de quan ly tai khoan va don hang. | High | Done |
-| PB-02 | La khach hang, toi muon xem danh sach san pham trai cay de chon mua. | High | Done |
-| PB-03 | La khach hang, toi muon them san pham vao gio hang va dat hang. | High | Done |
-| PB-04 | La admin, toi muon quan ly san pham de cap nhat gia, mo ta va ton kho. | High | Done |
-| PB-05 | La admin, toi muon xem danh sach don hang va cap nhat trang thai xu ly. | Medium | Done |
-| PB-06 | La he thong, toi muon dong bo su kien don hang va ton kho qua Redis Streams. | High | Done |
-| PB-07 | La admin, toi muon xem bao cao don hang/doanh thu de theo doi kinh doanh. | Medium | Done |
-| PB-08 | La nguoi dung, toi muon quen mat khau va dat lai mat khau qua email/link test. | Medium | Done |
-| PB-09 | La nhom phat trien, toi muon docker hoa MongoDB/Redis de chay local on dinh. | Medium | Done |
+### Tăng độ bền vững hệ thống
+- **Retry (3–5s), timeout thống nhất, circuit breaker, fallback response** cho HTTP call giữa service
+- **Redis Sentinel / Cluster** — loại bỏ single point of failure
+- **TTL + cache invalidation strategy** và cơ chế rebuild projection khi Redis mất dữ liệu
 
-Sprint plan:
+### Nâng cấp chức năng
+- **Thanh toán online** (VNPay, MoMo, Stripe)
+- **Quản lý vận chuyển**, tracking đơn hàng
+- **Mã giảm giá / voucher**, đánh giá & nhận xét sản phẩm
+- **Thông báo realtime** (WebSocket / SSE)
+- **AI Agent nâng cao:** tư vấn sản phẩm theo ngữ cảnh, đề xuất combo, phân tích đơn hàng, cảnh báo tồn kho thấp
 
-| Sprint | Muc tieu | Backlog items | Ket qua |
-| --- | --- | --- | --- |
-| Sprint 1 | Khoi tao kien truc microservice, frontend Vite va ha tang MongoDB/Redis. | PB-02, PB-09 | Co FE/BE chay local, gateway va services ket noi ha tang. |
-| Sprint 2 | Hoan thien luong tai khoan, san pham va admin product. | PB-01, PB-04, PB-08 | Co dang ky/dang nhap, reset password, CRUD/seed san pham. |
-| Sprint 3 | Hoan thien dat hang, ton kho, event-driven va trang admin don hang. | PB-03, PB-05, PB-06 | Tao don hang, cap nhat ton kho, projection Redis va quan ly don hang. |
-| Sprint 4 | On dinh san pham, bao cao va tai lieu demo. | PB-07 | Co dashboard/report, README va huong dan trien khai nhom. |
+### Chất lượng mã nguồn
+- **Unit test + Integration test** đầy đủ cho các luồng quan trọng
+- **Database migration** chính thức
+- **Phân quyền admin chi tiết** (quản lý từng module độc lập)
 
-Task management:
+---
 
-| Task | Mo ta | Phu trach | Trang thai |
-| --- | --- | --- | --- |
-| T-01 | Thiet lap `docker-compose.yml` cho MongoDB va Redis. | Nguoi 3 | Done |
-| T-02 | Xay dung gateway route `/api/products`, `/api/orders`, `/api/auth`. | Nguoi 1 | Done |
-| T-03 | Xay dung `user-service` cho auth, JWT va reset password. | Nguoi 1 | Done |
-| T-04 | Xay dung `product-service` va model san pham. | Nguoi 2 | Done |
-| T-05 | Xay dung `order-service` command/query tao va doc don hang. | Nguoi 3 | Done |
-| T-06 | Xay dung `inventory-service` lang nghe order event va cap nhat stock. | Nguoi 3 | Done |
-| T-07 | Xay dung `projection-service` tao read model tren Redis. | Nguoi 2 | Done |
-| T-08 | Xay dung FE: home, product list, cart, profile, my orders. | Nguoi 1 | Done |
-| T-09 | Xay dung FE admin: dashboard, products, orders. | Nguoi 1 | Done |
-| T-10 | Kiem thu luong chinh: seed product, login, dat hang, xem admin orders. | Ca nhom | Done |
-
-Quy trinh Scrum:
-
-1. Sprint planning: chon cac item co uu tien cao tu product backlog, tach thanh task nho va gan nguoi phu trach.
-2. Daily scrum: moi thanh vien cap nhat da lam gi, se lam gi tiep theo va blocker neu co.
-3. Development: moi task can co code, chay local duoc va duoc review theo module lien quan.
-4. Sprint review: demo cac tinh nang hoan thanh tren frontend va API, doi chieu voi acceptance criteria.
-5. Sprint retrospective: ghi lai diem tot, van de gap phai va hanh dong cai tien cho sprint tiep theo.
-
-Definition of Done:
-
-- Tinh nang chay duoc tren moi truong local voi MongoDB va Redis.
-- API lien quan co response dung va frontend su dung duoc.
-- Khong lam hong cac luong chinh: dang nhap, xem san pham, dat hang, quan ly admin.
-- README hoac ghi chu ky thuat duoc cap nhat neu co thay doi cach chay/cach dung.
-- Task duoc chuyen sang `Done` sau khi demo hoac duoc nhom xac nhan.
-
-## Chia service cho 3 may
-
-Dat MongoDB va Redis o mot may chung, vi tat ca service can ket noi ve hai ha tang nay. Vi du may chung co IP `192.168.1.10`:
-
-```env
-REDIS_URL=redis://192.168.1.10:6379
-MONGO_URL=mongodb://192.168.1.10:27017
-```
-
-Gateway can tro den IP service that:
-
-```env
-PRODUCT_SERVICE_URL=http://192.168.1.11:8081
-ORDER_SERVICE_URL=http://192.168.1.12:8082
-USER_SERVICE_URL=http://192.168.1.13:8083
-INVENTORY_SERVICE_URL=http://192.168.1.12:8084
-```
-
-Goi y chia nhom:
-
-- Nguoi 1: `gateway` + `FE` + `user-service`.
-- Nguoi 2: `product-service` + `projection-service`.
-- Nguoi 3: `order-service` + `inventory-service` + Docker ha tang chung.
+*Dự án phát triển theo phương pháp Agile/Scrum — Nhóm Chill Group, 2025*
